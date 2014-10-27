@@ -11,12 +11,11 @@
                    "leiningen.release/bump-version" "release"]
                   ["auto-release" "update-release-notes"]
                   ["vcs" "commit"]
-                  ["auto-release" "tag" "v"]
-                  ;; ["deploy"]
-                  ;; ["vcs" "push"]
+                  ["vcs" "tag" "v"]
+                  ["deploy" "clojars"]
+                  ["vcs" "push"]
                   ["auto-release" "checkout" "develop"]
                   ["auto-release" "merge" "master"]
                   ["change" "version" "leiningen.release/bump-version"]
                   ["vcs" "commit"]
-                  ;; ["vcs" "push"]
-                  ])
+                  ["vcs" "push"]])

@@ -57,6 +57,7 @@
          (line-seq)
          (remove #(or (empty? %)
                       (re-seq #"^- Bump to" %)
+                      (re-seq #"^- Prepare release" %)
                       (re-seq #"^- Release " %)
                       (re-seq #"^- Version " %)
                       (re-seq #"^- Merge branch " %))))))
