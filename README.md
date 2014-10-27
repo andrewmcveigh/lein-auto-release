@@ -1,22 +1,33 @@
-# lein-git-merge
+# lein-auto-release
 
-A Leiningen plugin to do many wonderful things.
+A Leiningen plugin to handle automatic merging of branches in the
+lein release process. Includes other git utils.
 
 ## Usage
 
-FIXME: Use this for user-level plugins:
+Put `[com.andrewmcveigh/lein-auto-release "0.1.0"]` into the
+`:plugins` vector of your project.clj.
 
-Put `[lein-git-merge "0.1.0-SNAPSHOT"]` into the `:plugins` vector of your
-`:user` profile, or if you are on Leiningen 1.x do `lein plugin install
-lein-git-merge 0.1.0-SNAPSHOT`.
+```clojure
+(defproject
+  ...
 
-FIXME: Use this for project-level plugins:
-
-Put `[lein-git-merge "0.1.0-SNAPSHOT"]` into the `:plugins` vector of your project.clj.
-
-FIXME: and add an example usage that actually makes sense:
-
-    $ lein git-merge
+  :release-tasks [["auto-release" "checkout" "master"]
+                  ["auto-release" "merge-no-ff" "develop"]
+                  ["vcs" "assert-committed"]
+                  ["change" "version"
+                   "leiningen.release/bump-version" "release"]
+                  ["auto-release" "update-release-notes"]
+                  ["vcs" "commit"]
+                  ["vcs" "tag" "v"]
+                  ["deploy" "clojars"]
+                  ["vcs" "push"]
+                  ["auto-release" "checkout" "develop"]
+                  ["auto-release" "merge" "master"]
+                  ["change" "version" "leiningen.release/bump-version"]
+                  ["vcs" "commit"]
+                  ["vcs" "push"]])
+```
 
 ## License
 
