@@ -3,7 +3,8 @@
   (:require
    [clojure.java.io :as io]
    [clojure.java.shell :as shell]
-   [leiningen.core.eval :as eval]))
+   [leiningen.core.eval :as eval]
+   [leiningen.core.main :as main]))
 
 (defn checkout [{:keys [root]} branch]
   (binding [eval/*dir* root]
@@ -64,3 +65,14 @@
           (doseq [line (line-seq r)]
             (spit tmp (str line \newline) :append true))))
       (io/copy tmp file))))
+
+(defn- not-found [subtask]
+  (partial #'main/task-not-found (str "auto-release " subtask)))
+
+(defn ^{:subtasks [#'checkout #'merge-no-ff #'merge #'update-release-notes]}
+  auto-release
+  "Interact with the version control system."
+  [project subtask & args]
+  (let [subtasks (:subtasks (meta #'auto-release) {})
+        [subtask-var] (filter #(= subtask (name (:name (meta %)))) subtasks)]
+    (apply (or subtask-var (not-found subtask)) project args)))

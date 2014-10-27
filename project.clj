@@ -4,7 +4,6 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :eval-in-leiningen true
-  :plugins [[com.andrewmcveigh/lein-auto-release "0.1.0-SNAPSHOT"]]
   :release-tasks [["auto-release" "checkout" "master"]
                   ["auto-release" "merge-no-ff" "develop"]
                   ["vcs" "assert-committed"]
