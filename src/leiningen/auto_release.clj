@@ -58,6 +58,7 @@
          (remove #(or (empty? %)
                       (re-seq #"^- Bump to" %)
                       (re-seq #"^- Prepare release" %)
+                      (re-seq #"^- [Cc]heck" %)
                       (re-seq #"^- Release " %)
                       (re-seq #"^- Version " %)
                       (re-seq #"^- Merge branch " %))))))
@@ -71,7 +72,7 @@
       (spit tmp (format "## v%s\n\n" version))
       (doseq [line (commit-log project (latest-tag project))]
         (println line)
-        (spit tmp line :append true))
+        (spit tmp (str line \newline) :append true))
       (if (.exists file)
         (with-open [r (io/reader file)]
           (doseq [line (line-seq r)]
