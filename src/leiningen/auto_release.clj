@@ -64,6 +64,3 @@
           (doseq [line (line-seq r)]
             (spit tmp (str line \newline) :append true))))
       (io/copy tmp file))))
-
-(update-release-notes {:root "/Users/andrewmcveigh/Projects/com.andrewmcveigh/refdb"
-                       :version "0.6.0"})
