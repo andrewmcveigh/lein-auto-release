@@ -1,4 +1,5 @@
 (ns leiningen.auto-release
+  (:refer-clojure :exclude [merge])
   (:require
    [clojure.java.io :as io]
    [clojure.java.shell :as shell]
@@ -15,19 +16,6 @@
 (defn merge [{:keys [root]} branch]
   (binding [eval/*dir* root]
     (eval/sh "git" "merge" branch "--no-edit")))
-
-(defn update-release-notes [{:keys [root version]}]
-  (binding [eval/*dir* root]
-    (let [file (io/file root "ReleaseNotes.md")
-          tmp (java.io.File/createTempFile "release-notes" ".tmp")]
-      (prn tmp)
-      (spit tmp (format "## v%s\n\n" version))
-      ;; (with-open [r (io/reader file)]
-      ;;   (doseq [line (line-seq r)]
-      ;;     (prn line)
-      ;;     (spit tmp (str line \newline) :append true)))
-      (println (slurp tmp))))
-  ) 
 
 (defn latest-tag [{:keys [root]}]
   (let [{:keys [out] :as cmd} (shell/sh "git" "tag" :dir root)]
@@ -64,6 +52,18 @@
                       (re-seq #"^- Release " %)
                       (re-seq #"^- Merge branch " %))))))
 
-;; (update-release-notes {:root "/Users/andrewmcveigh/Projects/com.andrewmcveigh/refdb" :version "0.1.0"})
-;; (latest-tag {:root "/Users/andrewmcveigh/Projects/com.andrewmcveigh/refdb"})
-(commit-log {:root "/Users/andrewmcveigh/Projects/com.andrewmcveigh/refdb"} "0.5.0")
+(defn update-release-notes [{:keys [root version] :as project}]
+  (binding [eval/*dir* root]
+    (let [file (io/file root "ReleaseNotes.md")
+          tmp (java.io.File/createTempFile "release-notes" ".tmp")]
+      (spit tmp (format "## v%s\n\n" version))
+      (doseq [line (commit-log project (latest-tag project))]
+        (spit tmp line :append true))
+      (when (.exists file)
+        (with-open [r (io/reader file)]
+          (doseq [line (line-seq r)]
+            (spit tmp (str line \newline) :append true))))
+      (io/copy tmp file))))
+
+(update-release-notes {:root "/Users/andrewmcveigh/Projects/com.andrewmcveigh/refdb"
+                       :version "0.6.0"})
