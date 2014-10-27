@@ -18,6 +18,13 @@
   (binding [eval/*dir* root]
     (eval/sh "git" "merge" branch "--no-edit")))
 
+(defn tag [{:keys [root version]} & [prefix]]
+  (binding [eval/*dir* root]
+    (let [tag (if prefix
+                (str prefix version)
+                version)]
+      (eval/sh "git" "tag" tag "-m" (str "Release " version)))))
+
 (defn latest-tag [{:keys [root]}]
   (let [{:keys [out] :as cmd} (shell/sh "git" "tag" :dir root)]
     (->> (java.io.StringReader. out)
@@ -74,7 +81,7 @@
 (defn- not-found [subtask]
   (partial #'main/task-not-found (str "auto-release " subtask)))
 
-(defn ^{:subtasks [#'checkout #'merge-no-ff #'merge #'update-release-notes]}
+(defn ^{:subtasks [#'checkout #'merge-no-ff #'merge #'tag #'update-release-notes]}
   auto-release
   "Interact with the version control system."
   [project subtask & args]
