@@ -11,7 +11,7 @@
                    "leiningen.release/bump-version" "release"]
                   ["auto-release" "update-release-notes"]
                   ["vcs" "commit"]
-                  ["vcs" "tag" "v"]
+                  ;; ["vcs" "tag" "v"]
                   ;; ["deploy"]
                   ;; ["vcs" "push"]
                   ["auto-release" "checkout" "develop"]

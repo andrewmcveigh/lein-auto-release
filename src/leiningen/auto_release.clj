@@ -51,19 +51,24 @@
          (remove #(or (empty? %)
                       (re-seq #"^- Bump to" %)
                       (re-seq #"^- Release " %)
+                      (re-seq #"^- Version " %)
                       (re-seq #"^- Merge branch " %))))))
 
 (defn update-release-notes [{:keys [root version] :as project}]
+  (println "Updating release notes with commit log")
   (binding [eval/*dir* root]
     (let [file (io/file root "ReleaseNotes.md")
           tmp (java.io.File/createTempFile "release-notes" ".tmp")]
+      (println (format "## v%s\n\n" version))
       (spit tmp (format "## v%s\n\n" version))
       (doseq [line (commit-log project (latest-tag project))]
+        (println line)
         (spit tmp line :append true))
-      (when (.exists file)
+      (if (.exists file)
         (with-open [r (io/reader file)]
           (doseq [line (line-seq r)]
-            (spit tmp (str line \newline) :append true))))
+            (spit tmp (str line \newline) :append true)))
+        (eval/sh "git" "add" "ReleaseNotes.md"))
       (io/copy tmp file))))
 
 (defn- not-found [subtask]
