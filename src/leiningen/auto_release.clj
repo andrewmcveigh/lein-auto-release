@@ -30,9 +30,11 @@
     (->> (java.io.StringReader. out)
          (io/reader)
          (line-seq)
-         (map #(re-seq #"\d+\.\d+\.\d+$" %))
+         (map #(re-seq #"(\d+)\.(\d+)\.(\d+)$" %))
          (map first)
-         (sort)
+         (sort-by (fn [[ver maj min patch]]
+                    [(Integer. maj) (Integer. min) (Integer. patch)]))
+         (map first)
          (last))))
 
 (defn current-branch [{:keys [root]}]
