@@ -75,6 +75,7 @@
       (doseq [line (commit-log project (latest-tag project))]
         (println line)
         (spit tmp (str line \newline) :append true))
+      (spit tmp "\n" :append true)
       (if (.exists file)
         (with-open [r (io/reader file)]
           (doseq [line (line-seq r)]
