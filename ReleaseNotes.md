@@ -1,3 +1,7 @@
+## v0.1.4
+
+- Add update-readme-version task
+
 ## v0.1.3
 
 - Test matches rev-list output which has line-break
