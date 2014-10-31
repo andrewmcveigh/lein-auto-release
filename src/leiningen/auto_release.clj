@@ -6,6 +6,31 @@
    [leiningen.core.eval :as eval]
    [leiningen.core.main :as main]))
 
+(defn current-branch [{:keys [root]}]
+  (let [{:keys [out] :as cmd} (shell/sh "git" "branch" :dir root)]
+    (->> (java.io.StringReader. out)
+         (io/reader)
+         (line-seq)
+         (map #(re-seq #"^\* (\w+)" %))
+         (remove nil?)
+         (ffirst)
+         (last))))
+
+(defn fetch-all [{:keys [root]}]
+  (let [{:keys [out exit] :as cmd} (shell/sh "git" "fetch" "--all" :dir root)]
+    (= 0 exit)))
+
+(defn remote-update [{:keys [root]}]
+  (let [{:keys [out exit] :as cmd} (shell/sh "git" "remote" "update" :dir root)]
+    (= 0 exit)))
+
+(defn up-to-date? [{:keys [root]}]
+  (let [{:keys [out exit] :as cmd} (shell/sh "git" "status" "-s" "-uno" :dir root)]
+    (empty? out)))
+
+(defn ensure [{:keys [root] :as project}]
+  (assert (= "develop" (current-branch project))))
+
 (defn checkout [{:keys [root]} branch]
   (binding [eval/*dir* root]
     (eval/sh "git" "checkout" branch)))
@@ -35,16 +60,6 @@
          (sort-by (fn [[ver maj min patch]]
                     [(Integer. maj) (Integer. min) (Integer. patch)]))
          (map first)
-         (last))))
-
-(defn current-branch [{:keys [root]}]
-  (let [{:keys [out] :as cmd} (shell/sh "git" "branch" :dir root)]
-    (->> (java.io.StringReader. out)
-         (io/reader)
-         (line-seq)
-         (map #(re-seq #"^\* (\w+)" %))
-         (remove nil?)
-         (ffirst)
          (last))))
 
 (defn commit-log [{:keys [root]} last-version]
