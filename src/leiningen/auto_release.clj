@@ -6,6 +6,8 @@
    [leiningen.core.eval :as eval]
    [leiningen.core.main :as main]))
 
+(def repo-ensured? (atom nil))
+
 (defn current-branch [{:keys [root]}]
   (let [{:keys [out] :as cmd} (shell/sh "git" "branch" :dir root)]
     (->> (java.io.StringReader. out)
@@ -28,12 +30,22 @@
   (let [{:keys [out exit] :as cmd} (shell/sh "git" "status" "-s" "-uno" :dir root)]
     (empty? out)))
 
-(defn ensure [{:keys [root] :as project}]
-  (assert (= "develop" (current-branch project))))
-
 (defn checkout [{:keys [root]} branch]
   (binding [eval/*dir* root]
     (eval/sh "git" "checkout" branch)))
+
+(defn ensure-repo [{:keys [root] :as project}]
+  (try
+    (assert (= "develop" (current-branch project)) "Not on branch `develop`")
+    (assert (remote-update project) "Remote update failed")
+    (assert (up-to-date? project) "Branch `develop` not up to date")
+    (checkout project "master")
+    (let [master-up-to-date? (up-to-date? project)]
+      (checkout project "develop")
+      (assert master-up-to-date? "Branch `master` not up to date"))
+    (catch AssertionError e
+      (println e)
+      (System/exit 1))))
 
 (defn merge-no-ff [{:keys [root]} branch]
   (binding [eval/*dir* root]
@@ -105,6 +117,9 @@
   auto-release
   "Interact with the version control system."
   [project subtask & args]
+  (when-not @repo-ensured?
+    (ensure-repo project)
+    (reset! repo-ensured? true))
   (let [subtasks (:subtasks (meta #'auto-release) {})
         [subtask-var] (filter #(= subtask (name (:name (meta %)))) subtasks)]
     (apply (or subtask-var (not-found subtask)) project args)))
