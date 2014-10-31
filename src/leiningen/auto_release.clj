@@ -1,5 +1,5 @@
 (ns leiningen.auto-release
-  (:refer-clojure :exclude [merge])
+  (:refer-clojure :exclude [merge resolve])
   (:require
    [clojure.java.io :as io]
    [clojure.java.shell :as shell]
@@ -47,7 +47,8 @@
          (map first)
          (last))))
 
-(defn readme-version? [{:keys [root group name version] :as project}]
+(defn ^{:ensure-msg "Readme does not contain correct version"}
+  readme-version? [{:keys [root group name] :as project}]
   (let [readme (io/file root "readme.md")
         symbol (symbol group name)
         artifact-str (format "[%s \"%s\"]" symbol (latest-tag project))]
@@ -56,7 +57,8 @@
          (filter #(.contains % artifact-str))
          (seq))))
 
-(defn update-readme-version [{:keys [root group name version] :as project}]
+(defn ^{:ensure #'readme-version?}
+  update-readme-version [{:keys [root group name version] :as project}]
   (let [readme (io/file root "readme.md")
         symbol (symbol group name)
         artifact-str (format "[%s \"%s\"]" symbol (latest-tag project))
@@ -71,9 +73,14 @@
          (doall))
     (io/copy tmp readme)))
 
-(defn ensure-repo [{:keys [root] :as project}]
+(def resolve (partial ns-resolve 'leiningen.auto-release))
+
+(defn ensure-repo [{:keys [root release-tasks] :as project}]
   (try
-    (assert (readme-version? project) "Readme does not contain correct version")
+    (doseq [ensure-task (->> release-tasks
+                             (filter (comp #{"auto-release"} first))
+                             (keep (comp :ensure meta resolve symbol second)))]
+      (assert (ensure-task project) (:ensure-msg (meta ensure-task))))
     (assert (= "develop" (current-branch project)) "Not on branch `develop`")
     (assert (remote-update project) "Remote update failed")
     (assert (up-to-date? project "develop") "Branch `develop` not up to date")
