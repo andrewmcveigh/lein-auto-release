@@ -1,4 +1,4 @@
-(defproject com.andrewmcveigh/lein-auto-release "0.1.3"
+(defproject com.andrewmcveigh/lein-auto-release "0.1.4-SNAPSHOT"
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
