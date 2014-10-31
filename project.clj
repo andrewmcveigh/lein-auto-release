@@ -10,6 +10,7 @@
                   ["change" "version"
                    "leiningen.release/bump-version" "release"]
                   ["auto-release" "update-release-notes"]
+                  ["auto-release" "update-readme-version"]
                   ["vcs" "commit"]
                   ["vcs" "tag" "v"]
                   ["deploy" "clojars"]
