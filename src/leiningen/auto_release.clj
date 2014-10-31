@@ -26,26 +26,28 @@
   (let [{:keys [out exit] :as cmd} (shell/sh "git" "remote" "update" :dir root)]
     (= 0 exit)))
 
-(defn up-to-date? [{:keys [root]}]
-  (let [{:keys [out exit] :as cmd} (shell/sh "git" "status" "-s" "-uno" :dir root)]
-    (empty? out)))
-
-(defn checkout [{:keys [root]} branch]
-  (binding [eval/*dir* root]
-    (eval/sh "git" "checkout" branch)))
+(defn up-to-date? [{:keys [root]} branch]
+  (let [{:keys [out exit] :as cmd}
+        (shell/sh "git"
+                  "rev-list"
+                  (format "%s...origin/%s" branch branch)
+                  "--count"
+                  :dir root)]
+    (= "0" out)))
 
 (defn ensure-repo [{:keys [root] :as project}]
   (try
     (assert (= "develop" (current-branch project)) "Not on branch `develop`")
     (assert (remote-update project) "Remote update failed")
-    (assert (up-to-date? project) "Branch `develop` not up to date")
-    (checkout project "master")
-    (let [master-up-to-date? (up-to-date? project)]
-      (checkout project "develop")
-      (assert master-up-to-date? "Branch `master` not up to date"))
+    (assert (up-to-date? project "develop") "Branch `develop` not up to date")
+    (assert (up-to-date? project "master") "Branch `master` not up to date")
     (catch AssertionError e
       (println e)
       (System/exit 1))))
+
+(defn checkout [{:keys [root]} branch]
+  (binding [eval/*dir* root]
+    (eval/sh "git" "checkout" branch)))
 
 (defn merge-no-ff [{:keys [root]} branch]
   (binding [eval/*dir* root]
