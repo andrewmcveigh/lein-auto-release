@@ -1,4 +1,4 @@
-(defproject com.andrewmcveigh/lein-auto-release "0.1.3"
+(defproject com.andrewmcveigh/lein-auto-release "0.1.4-SNAPSHOT"
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
@@ -10,6 +10,7 @@
                   ["change" "version"
                    "leiningen.release/bump-version" "release"]
                   ["auto-release" "update-release-notes"]
+                  ["auto-release" "update-readme-version"]
                   ["vcs" "commit"]
                   ["vcs" "tag" "v"]
                   ["deploy" "clojars"]

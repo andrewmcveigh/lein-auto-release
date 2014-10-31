@@ -35,8 +35,45 @@
                   :dir root)]
     (= "0\n" out)))
 
+(defn latest-tag [{:keys [root]}]
+  (let [{:keys [out] :as cmd} (shell/sh "git" "tag" :dir root)]
+    (->> (java.io.StringReader. out)
+         (io/reader)
+         (line-seq)
+         (map #(re-seq #"(\d+)\.(\d+)\.(\d+)$" %))
+         (map first)
+         (sort-by (fn [[ver maj min patch]]
+                    [(Integer. maj) (Integer. min) (Integer. patch)]))
+         (map first)
+         (last))))
+
+(defn readme-version? [{:keys [root group name version] :as project}]
+  (let [readme (io/file root "readme.md")
+        symbol (symbol group name)
+        artifact-str (format "[%s \"%s\"]" symbol (latest-tag project))]
+    (->> (io/reader readme)
+         (line-seq)
+         (filter #(.contains % artifact-str))
+         (seq))))
+
+(defn update-readme-version [{:keys [root group name version] :as project}]
+  (let [readme (io/file root "readme.md")
+        symbol (symbol group name)
+        artifact-str (format "[%s \"%s\"]" symbol (latest-tag project))
+        new-artifact-str (format "[%s \"%s\"]" symbol version)
+        tmp (java.io.File/createTempFile "readme.md" ".tmp")]
+    (spit tmp "")
+    (->> (io/reader readme)
+         (line-seq)
+         (map #(spit tmp
+                     (str (.replace % artifact-str new-artifact-str) "\n")
+                     :append true))
+         (doall))
+    (io/copy tmp readme)))
+
 (defn ensure-repo [{:keys [root] :as project}]
   (try
+    (assert (readme-version? project) "Readme does not contain correct version")
     (assert (= "develop" (current-branch project)) "Not on branch `develop`")
     (assert (remote-update project) "Remote update failed")
     (assert (up-to-date? project "develop") "Branch `develop` not up to date")
@@ -63,18 +100,6 @@
                 (str prefix version)
                 version)]
       (eval/sh "git" "tag" tag "-m" (str "Release " version)))))
-
-(defn latest-tag [{:keys [root]}]
-  (let [{:keys [out] :as cmd} (shell/sh "git" "tag" :dir root)]
-    (->> (java.io.StringReader. out)
-         (io/reader)
-         (line-seq)
-         (map #(re-seq #"(\d+)\.(\d+)\.(\d+)$" %))
-         (map first)
-         (sort-by (fn [[ver maj min patch]]
-                    [(Integer. maj) (Integer. min) (Integer. patch)]))
-         (map first)
-         (last))))
 
 (defn commit-log [{:keys [root]} last-version]
   (let [{:keys [out] :as cmd}
@@ -115,7 +140,8 @@
 (defn- not-found [subtask]
   (partial #'main/task-not-found (str "auto-release " subtask)))
 
-(defn ^{:subtasks [#'checkout #'merge-no-ff #'merge #'tag #'update-release-notes]}
+(defn ^{:subtasks [#'checkout #'merge-no-ff #'merge #'tag
+                   #'update-readme-version #'update-release-notes]}
   auto-release
   "Interact with the version control system."
   [project subtask & args]
