@@ -6,6 +6,45 @@
    [leiningen.core.eval :as eval]
    [leiningen.core.main :as main]))
 
+(def repo-ensured? (atom nil))
+
+(defn current-branch [{:keys [root]}]
+  (let [{:keys [out] :as cmd} (shell/sh "git" "branch" :dir root)]
+    (->> (java.io.StringReader. out)
+         (io/reader)
+         (line-seq)
+         (map #(re-seq #"^\* (\w+)" %))
+         (remove nil?)
+         (ffirst)
+         (last))))
+
+(defn fetch-all [{:keys [root]}]
+  (let [{:keys [out exit] :as cmd} (shell/sh "git" "fetch" "--all" :dir root)]
+    (= 0 exit)))
+
+(defn remote-update [{:keys [root]}]
+  (let [{:keys [out exit] :as cmd} (shell/sh "git" "remote" "update" :dir root)]
+    (= 0 exit)))
+
+(defn up-to-date? [{:keys [root]} branch]
+  (let [{:keys [out exit] :as cmd}
+        (shell/sh "git"
+                  "rev-list"
+                  (format "%s...origin/%s" branch branch)
+                  "--count"
+                  :dir root)]
+    (= "0\n" out)))
+
+(defn ensure-repo [{:keys [root] :as project}]
+  (try
+    (assert (= "develop" (current-branch project)) "Not on branch `develop`")
+    (assert (remote-update project) "Remote update failed")
+    (assert (up-to-date? project "develop") "Branch `develop` not up to date")
+    (assert (up-to-date? project "master") "Branch `master` not up to date")
+    (catch AssertionError e
+      (println e)
+      (System/exit 1))))
+
 (defn checkout [{:keys [root]} branch]
   (binding [eval/*dir* root]
     (eval/sh "git" "checkout" branch)))
@@ -37,16 +76,6 @@
          (map first)
          (last))))
 
-(defn current-branch [{:keys [root]}]
-  (let [{:keys [out] :as cmd} (shell/sh "git" "branch" :dir root)]
-    (->> (java.io.StringReader. out)
-         (io/reader)
-         (line-seq)
-         (map #(re-seq #"^\* (\w+)" %))
-         (remove nil?)
-         (ffirst)
-         (last))))
-
 (defn commit-log [{:keys [root]} last-version]
   (let [{:keys [out] :as cmd}
         (shell/sh "git" "--no-pager" "log" "--format=%H" (format "v%s.." last-version)
@@ -75,6 +104,7 @@
       (doseq [line (commit-log project (latest-tag project))]
         (println line)
         (spit tmp (str line \newline) :append true))
+      (spit tmp "\n" :append true)
       (if (.exists file)
         (with-open [r (io/reader file)]
           (doseq [line (line-seq r)]
@@ -89,6 +119,9 @@
   auto-release
   "Interact with the version control system."
   [project subtask & args]
+  (when-not @repo-ensured?
+    (ensure-repo project)
+    (reset! repo-ensured? true))
   (let [subtasks (:subtasks (meta #'auto-release) {})
         [subtask-var] (filter #(= subtask (name (:name (meta %)))) subtasks)]
     (apply (or subtask-var (not-found subtask)) project args)))
