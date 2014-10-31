@@ -1,3 +1,10 @@
+## v0.1.3
+
+- Test matches rev-list output which has line-break
+- Use better rev-list to check branch status
+- Implement ensure-repo, and check before any task
+- Add repo state util fns
+- Add extra newline
 ## v0.1.2
 
 - Correct sorting of latest-tag
