@@ -33,7 +33,7 @@
                   (format "%s...origin/%s" branch branch)
                   "--count"
                   :dir root)]
-    (= "0" out)))
+    (= "0\n" out)))
 
 (defn ensure-repo [{:keys [root] :as project}]
   (try
