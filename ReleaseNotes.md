@@ -1,3 +1,7 @@
+## v0.1.5
+
+- Implement task-based assurances
+
 ## v0.1.4
 
 - Add update-readme-version task

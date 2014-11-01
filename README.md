@@ -5,7 +5,7 @@ lein release process. Includes other git utils.
 
 ## Usage
 
-Put `[com.andrewmcveigh/lein-auto-release "0.1.4"]` into the
+Put `[com.andrewmcveigh/lein-auto-release "0.1.5"]` into the
 `:plugins` vector of your project.clj.
 
 ```clojure
