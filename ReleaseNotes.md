@@ -1,3 +1,7 @@
+## v0.1.6
+
+- Add update-marginalia-gh-pages and support
+
 ## v0.1.5
 
 - Implement task-based assurances
