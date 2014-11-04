@@ -3,20 +3,31 @@
   (:require
    [clojure.java.io :as io]
    [clojure.java.shell :as shell]
+   [clojure.string :as string]
    [leiningen.core.eval :as eval]
    [leiningen.core.main :as main]))
 
 (def repo-ensured? (atom nil))
+(def last-branch (atom nil))
 
-(defn current-branch [{:keys [root]}]
+(defn branches [{:keys [root]}]
   (let [{:keys [out] :as cmd} (shell/sh "git" "branch" :dir root)]
     (->> (java.io.StringReader. out)
          (io/reader)
          (line-seq)
-         (map #(re-seq #"^\* (\w+)" %))
-         (remove nil?)
-         (ffirst)
-         (last))))
+         (map #(if-let [[[_ current]] (re-seq #"^\* ([\w\-]+)" %)]
+                 {:current current}
+                 (string/trim %))))))
+
+(defn current-branch [project]
+  (->> (branches project)
+       (keep :current)
+       (first)))
+
+(defn branch-exists? [project branch]
+  (->> (branches project)
+       (map #(or (:current %) %))
+       (some #{branch})))
 
 (defn fetch-all [{:keys [root]}]
   (let [{:keys [out exit] :as cmd} (shell/sh "git" "fetch" "--all" :dir root)]
@@ -89,9 +100,59 @@
       (println e)
       (System/exit 1))))
 
-(defn checkout [{:keys [root]} branch]
+(defn checkout [{:keys [root] :as project} branch & opts]
+  (when-let [current (current-branch project)]
+    (printf "Branch: %s\n" (reset! last-branch current)))
   (binding [eval/*dir* root]
-    (eval/sh "git" "checkout" branch)))
+    (apply eval/sh (concat ["git" "checkout"] opts [branch]))))
+
+(defn checkout-latest-tag [project]
+  (checkout project (format "v%s" (latest-tag project))))
+
+(defn checkout-last-branch [project]
+  (checkout project @last-branch))
+
+(defn push [project & args]
+  (binding [eval/*dir* (:root project)]
+    (apply eval/sh "git" "push" args)))
+
+(defn pull [project]
+  (binding [eval/*dir* (:root project)]
+    (eval/sh "git" "pull")))
+
+(defn checkout-gh-pages-branch [{:keys [root] :as project}]
+  (if (branch-exists? project "gh-pages")
+    (do
+      (checkout project "gh-pages")
+      (pull project)
+      {:existed? true})
+    (do
+      (checkout project "gh-pages" "--orphan")
+      (let [files (remove #(.startsWith (.getName %) ".")
+                          (.listFiles (io/file root)))]
+        (doseq [file (filter #(.isDirectory %) files)]
+          (try
+            (shell/sh "rm" "-r" (.getCanonicalPath file))
+            (catch Exception _))
+          (try
+            (shell/sh "git" "rm" "-r" "--cached" (.getCanonicalPath file))
+            (catch Exception _)))
+        (doseq [file (remove #(.isDirectory %) files)]
+          (try
+            (shell/sh "rm" (.getCanonicalPath file))
+            (catch Exception _))
+          (try
+            (shell/sh "git" "rm" "--cached" (.getCanonicalPath file))
+            (catch Exception _))))
+      {:existed? false})))
+
+(defn add [project & args]
+  (binding [eval/*dir* (:root project)]
+    (apply eval/sh "git" "add" args)))
+
+(defn commit [project message & opts]
+  (binding [eval/*dir* (:root project)]
+    (apply eval/sh (concat ["git" "commit"] opts ["-m" message]))))
 
 (defn merge-no-ff [{:keys [root]} branch]
   (binding [eval/*dir* root]
@@ -144,11 +205,28 @@
         (eval/sh "git" "add" "ReleaseNotes.md"))
       (io/copy tmp file))))
 
+(defn update-marginalia-gh-pages [{:keys [root] :as project}]
+  (let [doc (io/file root "docs/uberdoc.html")
+        text (slurp doc)
+        _ (.delete doc)
+        {:keys [existed?]} (checkout-gh-pages-branch project)
+        uberdoc (io/file root "uberdoc.html")
+        latest-tag (latest-tag project)]
+    (spit uberdoc text)
+    (io/copy uberdoc (io/file root (format "%s.html" latest-tag)))
+    (add project "*.html")
+    (commit project (format "Regen marginalia docs: v%s" latest-tag))
+    (if existed?
+      (push project)
+      (push project "-u" "origin" "gh-pages"))
+    (checkout-last-branch project)))
+
 (defn- not-found [subtask]
   (partial #'main/task-not-found (str "auto-release " subtask)))
 
-(defn ^{:subtasks [#'checkout #'merge-no-ff #'merge #'tag
-                   #'update-readme-version #'update-release-notes]}
+(defn ^{:subtasks [#'checkout #'checkout-latest-tag #'merge-no-ff #'merge #'tag
+                   #'update-readme-version #'update-release-notes
+                   #'update-marginalia-gh-pages]}
   auto-release
   "Interact with the version control system."
   [project subtask & args]
