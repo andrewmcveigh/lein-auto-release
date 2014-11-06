@@ -92,7 +92,7 @@
                              (filter (comp #{"auto-release"} first))
                              (keep (comp :ensure meta resolve symbol second)))]
       (assert (ensure-task project) (:ensure-msg (meta ensure-task))))
-    (assert (= "develop" (current-branch project)) "Not on branch `develop`")
+    (assert (= "develop" (current-branch project)) "Release must be started on branch `develop`")
     (assert (remote-update project) "Remote update failed")
     (assert (up-to-date? project "develop") "Branch `develop` not up to date")
     (assert (up-to-date? project "master") "Branch `master` not up to date")
@@ -185,7 +185,8 @@
                       (re-seq #"^- [Cc]heck" %)
                       (re-seq #"^- Release " %)
                       (re-seq #"^- Version " %)
-                      (re-seq #"^- Merge branch " %))))))
+                      (re-seq #"^- Merge branch " %)
+                      (re-seq #"^- Merged in " %))))))
 
 (defn update-release-notes [{:keys [root version] :as project}]
   (println "Updating release notes with commit log")
