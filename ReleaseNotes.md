@@ -1,3 +1,8 @@
+## v0.1.7
+
+- Ignore bitbucket's 'Merged in '
+- Expand README.md with task info
+
 ## v0.1.6
 
 - Add update-marginalia-gh-pages and support
