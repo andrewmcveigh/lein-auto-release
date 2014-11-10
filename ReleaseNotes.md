@@ -1,3 +1,7 @@
+## v0.1.8
+
+- Ensure gh-pages branch up-to-date, fix #3
+
 ## v0.1.7
 
 - Ignore bitbucket's 'Merged in '
