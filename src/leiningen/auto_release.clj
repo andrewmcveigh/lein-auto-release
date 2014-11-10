@@ -206,7 +206,12 @@
         (eval/sh "git" "add" "ReleaseNotes.md"))
       (io/copy tmp file))))
 
-(defn update-marginalia-gh-pages [{:keys [root] :as project}]
+(defn ^{:ensure-msg "Branch `gh-pages` not up to date"} ensure-gh-pages
+  [project]
+  (up-to-date? project "gh-pages"))
+
+(defn ^{:ensure #'ensure-gh-pages} update-marginalia-gh-pages
+  [{:keys [root] :as project}]
   (let [doc (io/file root "docs/uberdoc.html")
         text (slurp doc)
         _ (.delete doc)
