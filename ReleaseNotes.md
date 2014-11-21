@@ -1,3 +1,7 @@
+## v0.1.9
+
+- Allow release when master not checked out
+
 ## v0.1.8
 
 - Ensure gh-pages branch up-to-date, fix #3

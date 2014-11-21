@@ -1,4 +1,4 @@
-(defproject com.andrewmcveigh/lein-auto-release "0.1.9-SNAPSHOT"
+(defproject com.andrewmcveigh/lein-auto-release "0.1.9"
   :description "A Leiningen plugin for automated releases"
   :url "https://github.com/andrewmcveigh/lein-auto-release"
   :license {:name "Eclipse Public License"
