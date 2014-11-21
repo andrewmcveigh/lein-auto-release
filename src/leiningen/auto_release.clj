@@ -10,8 +10,9 @@
 (def repo-ensured? (atom nil))
 (def last-branch (atom nil))
 
-(defn branches [{:keys [root]}]
-  (let [{:keys [out] :as cmd} (shell/sh "git" "branch" :dir root)]
+(defn branches [{:keys [root]} & opts]
+  (let [{:keys [out] :as cmd}
+        (apply shell/sh (concat ["git" "branch"] opts [:dir root]))]
     (->> (java.io.StringReader. out)
          (io/reader)
          (line-seq)
@@ -29,6 +30,11 @@
        (map #(or (:current %) %))
        (some #{branch})))
 
+(defn remote-exists? [project branch]
+  (->> (branches project "--all")
+       (map #(or (:current %) %))
+       (some #{(format "remotes/%s" branch)})))
+
 (defn fetch-all [{:keys [root]}]
   (let [{:keys [out exit] :as cmd} (shell/sh "git" "fetch" "--all" :dir root)]
     (= 0 exit)))
@@ -45,6 +51,10 @@
                   "--count"
                   :dir root)]
     (= "0\n" out)))
+
+(defn tracking? [project branch]
+  (and (branch-exists? project branch)
+       (remote-exists? project (format "origin/%s" branch))))
 
 (defn latest-tag [{:keys [root]}]
   (let [{:keys [out] :as cmd} (shell/sh "git" "tag" :dir root)]
@@ -95,7 +105,9 @@
     (assert (= "develop" (current-branch project)) "Release must be started on branch `develop`")
     (assert (remote-update project) "Remote update failed")
     (assert (up-to-date? project "develop") "Branch `develop` not up to date")
-    (assert (up-to-date? project "master") "Branch `master` not up to date")
+    (assert (or (not (tracking? project "master"))
+                (up-to-date? project "master"))
+            "Branch `master` not up to date")
     (catch AssertionError e
       (println e)
       (System/exit 1))))
