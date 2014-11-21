@@ -1,12 +1,12 @@
 (defproject com.andrewmcveigh/lein-auto-release "0.1.9-SNAPSHOT"
-  :description "FIXME: write description"
-  :url "http://example.com/FIXME"
+  :description "A Leiningen plugin for automated releases"
+  :url "https://github.com/andrewmcveigh/lein-auto-release"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :eval-in-leiningen true
-  :release-tasks [["auto-release" "checkout" "master"]
+  :release-tasks [["vcs" "assert-committed"]
+                  ["auto-release" "checkout" "master"]
                   ["auto-release" "merge-no-ff" "develop"]
-                  ["vcs" "assert-committed"]
                   ["change" "version"
                    "leiningen.release/bump-version" "release"]
                   ["auto-release" "update-release-notes"]
