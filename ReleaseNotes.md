@@ -1,3 +1,9 @@
+## v0.1.10
+
+- Use ff-branch task
+- Add ff-branch task
+- Ensure no snapshots in deps. Fix #4
+
 ## v0.1.9
 
 - Allow release when master not checked out
