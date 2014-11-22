@@ -101,21 +101,29 @@
 (def resolve (partial ns-resolve 'leiningen.auto-release))
 
 (defn ensure-repo [{:keys [root release-tasks] :as project}]
-  (try
-    (doseq [ensure-task (->> release-tasks
-                             (filter (comp #{"auto-release"} first))
-                             (keep (comp :ensure meta resolve symbol second)))]
-      (assert (ensure-task project) (:ensure-msg (meta ensure-task))))
-    (assert (not (snapshot-deps? project)))
-    (assert (= "develop" (current-branch project)) "Release must be started on branch `develop`")
-    (assert (remote-update project) "Remote update failed")
-    (assert (up-to-date? project "develop") "Branch `develop` not up to date")
-    (assert (or (not (tracking? project "master"))
-                (up-to-date? project "master"))
-            "Branch `master` not up to date")
-    (catch AssertionError e
-      (println e)
-      (System/exit 1))))
+  (let [tasks (->> release-tasks
+                   (filter (comp #{"auto-release"} first))
+                   (map (comp vec rest))
+                   (set))
+        ensure-var (comp :ensure meta resolve symbol first)]
+    (try
+      (doseq [[ensure-task args] (->> tasks
+                                      (map (comp (juxt ensure-var rest)))
+                                      (remove (comp nil? first)))]
+        (assert (apply ensure-task project args)
+                (apply format (:ensure-msg (meta ensure-task)) args)))
+      (assert (not (snapshot-deps? project)))
+      (assert (= "develop" (current-branch project))
+              "Release must be started on branch `develop`")
+      (assert (remote-update project) "Remote update failed")
+      (assert (up-to-date? project "develop") "Branch `develop` not up to date")
+      (assert (or (not (tracking? project "master"))
+                  (tasks ["ff-branch" "master"])
+                  (up-to-date? project "master"))
+              "Branch `master` not up to date")
+      (catch AssertionError e
+        (println e)
+        (System/exit 1)))))
 
 (defn checkout [{:keys [root] :as project} branch & opts]
   (when-let [current (current-branch project)]
@@ -186,6 +194,22 @@
                 version)]
       (eval/sh "git" "tag" tag "-m" (str "Release " version)))))
 
+(defn can-ff? [{:keys [root]}]
+  (let [{:keys [out] :as cmd} (shell/sh "git" "status" :dir root)]
+    (re-find #"and can be fast-forwarded" out)))
+
+(defn ^{:ensure-msg "Branch `%s` cannot be fast-forwarded"} ensure-ff-branch
+  [project branch]
+  (checkout project branch)
+  (let [ff? (can-ff? project)]
+    (checkout-last-branch project)
+    ff?))
+
+(defn ^{:ensure #'ensure-ff-branch} ff-branch [project branch]
+  (checkout project branch)
+  (pull project)
+  (checkout-last-branch project))
+
 (defn commit-log [{:keys [root]} last-version]
   (let [{:keys [out] :as cmd}
         (shell/sh "git" "--no-pager" "log" "--format=%H" (format "v%s.." last-version)
@@ -248,7 +272,7 @@
   (partial #'main/task-not-found (str "auto-release " subtask)))
 
 (defn ^{:subtasks [#'checkout #'checkout-latest-tag #'merge-no-ff #'merge #'tag
-                   #'update-readme-version #'update-release-notes
+                   #'ff-branch #'update-readme-version #'update-release-notes
                    #'update-marginalia-gh-pages]}
   auto-release
   "Interact with the version control system."
