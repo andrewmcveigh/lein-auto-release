@@ -5,10 +5,10 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :eval-in-leiningen true
   :release-tasks [["vcs" "assert-committed"]
+                  ["auto-release" "ff-branch" "master"]
                   ["auto-release" "checkout" "master"]
                   ["auto-release" "merge-no-ff" "develop"]
-                  ["change" "version"
-                   "leiningen.release/bump-version" "release"]
+                  ["change" "version" "leiningen.release/bump-version" "release"]
                   ["auto-release" "update-release-notes"]
                   ["auto-release" "update-readme-version"]
                   ["vcs" "commit"]
