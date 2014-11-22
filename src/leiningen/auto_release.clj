@@ -94,6 +94,10 @@
          (doall))
     (io/copy tmp readme)))
 
+(defn snapshot-deps? [project]
+  (when-not (System/getenv "LEIN_SNAPSHOTS_IN_RELEASE")
+    (some #(re-find #"SNAPSHOT" (second %)) (:dependencies project))))
+
 (def resolve (partial ns-resolve 'leiningen.auto-release))
 
 (defn ensure-repo [{:keys [root release-tasks] :as project}]
@@ -102,6 +106,7 @@
                              (filter (comp #{"auto-release"} first))
                              (keep (comp :ensure meta resolve symbol second)))]
       (assert (ensure-task project) (:ensure-msg (meta ensure-task))))
+    (assert (not (snapshot-deps? project)))
     (assert (= "develop" (current-branch project)) "Release must be started on branch `develop`")
     (assert (remote-update project) "Remote update failed")
     (assert (up-to-date? project "develop") "Branch `develop` not up to date")
